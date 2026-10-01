@@ -99,11 +99,11 @@ export class Toolchain {
         return {
           path: command,
           ok: false,
-          error: `gcc was not found (${command}): ${result.spawnError}`
+          error: `找不到 gcc（${command}）：${result.spawnError}`
         };
       }
       if (result.code !== 0) {
-        return { path: command, ok: false, error: `"${command} --version" exited with code ${result.code}` };
+        return { path: command, ok: false, error: `执行「${command} --version」返回了退出码 ${result.code}` };
       }
       return { path: command, ok: true, version: firstLine(result.stdout) };
     });
@@ -120,7 +120,7 @@ export class Toolchain {
         return {
           path: command,
           ok: false,
-          error: `gdb was not found (${command}): ${version.spawnError}`
+          error: `找不到 gdb（${command}）：${version.spawnError}`
         };
       }
       if (version.code !== 0) {
@@ -139,15 +139,15 @@ export class Toolchain {
           ok: false,
           version: firstLine(version.stdout),
           error:
-            `"${command}" does not support the Python 3 commands StackViz needs. ` +
-            'Install the gdb package of your distribution (it ships with Python enabled).'
+            `「${command}」不带 Python 3 支持，而 StackViz 的驱动脚本需要它。` +
+            '请安装发行版自带的 gdb 包（默认就带 Python）。'
         };
       }
       return {
         path: command,
         ok: true,
         version: firstLine(version.stdout),
-        detail: 'python 3 support: yes'
+        detail: 'Python 3 支持：有'
       };
     });
   }
@@ -172,9 +172,9 @@ function describePlatform(): string[] {
   const release = os.release();
   const isWsl = /microsoft/i.test(release);
   return [
-    `platform    : ${os.platform()} ${os.arch()} (${os.type()} ${release})`,
-    `wsl         : ${isWsl ? 'yes (WSL2 kernel)' : 'no'}`,
-    `node        : ${process.version}`
+    `平台        : ${os.platform()} ${os.arch()}（${os.type()} ${release}）`,
+    `WSL2 内核   : ${isWsl ? '是' : '否'}`,
+    `Node 版本   : ${process.version}`
   ];
 }
 
@@ -188,8 +188,8 @@ function debugSymbolsLine(): string {
     }
   });
   return found
-    ? 'libc6-dbg   : installed (library frames are filtered out either way)'
-    : 'libc6-dbg   : not installed (optional: sudo apt install -y libc6-dbg)';
+    ? 'libc6-dbg   : 已安装（有没有它都会过滤库函数帧）'
+    : 'libc6-dbg   : 未安装（可选：sudo apt install -y libc6-dbg）';
 }
 
 /** Everything the "Check Environment" command prints. */
@@ -202,16 +202,16 @@ export async function checkEnvironment(
   const gcc = await toolchain.checkGcc(gccPath);
   const gdb = await toolchain.checkGdb(gdbPath);
 
-  const lines: string[] = ['===== StackViz environment =====', ...describePlatform()];
+  const lines: string[] = ['===== StackViz 环境自检 =====', ...describePlatform()];
   lines.push(
     gcc.ok
-      ? `gcc         : OK - ${gcc.version}`
-      : `gcc         : MISSING - ${gcc.error}`
+      ? `gcc         : 正常 - ${gcc.version}`
+      : `gcc         : 缺失 - ${gcc.error}`
   );
   lines.push(
     gdb.ok
-      ? `gdb         : OK - ${gdb.version} (${gdb.detail})`
-      : `gdb         : MISSING - ${gdb.error}`
+      ? `gdb         : 正常 - ${gdb.version}（${gdb.detail}）`
+      : `gdb         : 缺失 - ${gdb.error}`
   );
   lines.push(debugSymbolsLine());
 
@@ -225,22 +225,22 @@ export async function checkEnvironment(
     } catch {
       writable = false;
     }
-    lines.push(`.stackviz   : ${writable ? `writable (${target})` : `NOT writable (${target})`}`);
+    lines.push(`.stackviz   : ${writable ? `可写（${target}）` : `不可写（${target}）`}`);
   } else {
-    lines.push('.stackviz   : no workspace folder is open');
+    lines.push('.stackviz   : 没有打开工作区文件夹');
   }
 
-  lines.push(`gcc path    : ${gccPath}`);
-  lines.push(`gdb path    : ${gdbPath}`);
+  lines.push(`gcc 路径    : ${gccPath}`);
+  lines.push(`gdb 路径    : ${gdbPath}`);
   if (!gcc.ok || !gdb.ok) {
     lines.push('');
-    lines.push('Install the toolchain with:');
+    lines.push('安装命令：');
     lines.push(`  ${INSTALL_COMMAND}`);
   } else {
     lines.push('');
-    lines.push('Everything StackViz needs is available.');
+    lines.push('StackViz 需要的工具都齐了。');
   }
-  lines.push('===== end of environment =====');
+  lines.push('===== 环境自检结束 =====');
 
   return { ok: gcc.ok && gdb.ok && writable, lines };
 }

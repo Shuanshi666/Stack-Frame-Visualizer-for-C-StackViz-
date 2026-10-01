@@ -135,7 +135,7 @@
       "stackviz": [
         {
           "id": "stackviz.callTree",
-          "name": "Call Tree",
+          "name": "调用树",
           "contextualTitle": "StackViz Call Tree",
           "icon": "media/stackviz.svg"
         }
@@ -144,7 +144,7 @@
     "viewsWelcome": [
       {
         "view": "stackviz.callTree",
-        "contents": "No recording yet.\n[Compile and Visualize Recursion](command:stackviz.compileAndVisualize)\n[Visualize Existing Binary](command:stackviz.visualizeExistingBinary)\nEvery function invocation becomes its own node, so a recursive function appears once per active or finished call."
+        "contents": "还没有记录。\n[编译并可视化递归](command:stackviz.compileAndVisualize)\n[可视化已有的可执行文件](command:stackviz.visualizeExistingBinary)\n每调用一次函数就是一个节点，所以递归的每一层都是独立的节点。"
       }
     ],
     "menus": {

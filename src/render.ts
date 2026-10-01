@@ -10,7 +10,7 @@ export function frameLine(frame: FrameInfo, index: number, isTop: boolean, inden
   const args = formatRecord(frame.args);
   const locals = formatRecord(frame.locals);
   const detail = locals.length > 0 ? `  {${locals}}` : '';
-  const marker = isTop ? '   <-- top' : '';
+  const marker = isTop ? '   <-- 栈顶' : '';
   return `${indent}#${index} ${frame.functionName}(${args})  ${prettyPath(frame.file)}:${frame.line}${detail}${marker}`;
 }
 
@@ -28,7 +28,7 @@ export function stackLines(frames: FrameInfo[], options: StackRenderOptions = {}
   const maxFrames = Math.max(KEEP_BOTTOM_FRAMES + 1, options.maxFrames ?? DEFAULT_MAX_PRINTED_FRAMES);
 
   if (frames.length === 0) {
-    return [`${indent}(call stack is empty)`];
+    return [`${indent}（调用栈是空的）`];
   }
   if (frames.length <= maxFrames) {
     return frames.map((frame, index) => frameLine(frame, index, index === frames.length - 1, indent));
@@ -39,7 +39,7 @@ export function stackLines(frames: FrameInfo[], options: StackRenderOptions = {}
   const top = frames.slice(frames.length - (maxFrames - KEEP_BOTTOM_FRAMES));
 
   const lines = bottom.map((frame, index) => frameLine(frame, index, false, indent));
-  lines.push(`${indent}  ... ${hidden} frame(s) hidden ...`);
+  lines.push(`${indent}  ... 中间省略 ${hidden} 帧 ...`);
   top.forEach((frame, index) => {
     const globalIndex = frames.length - top.length + index;
     lines.push(frameLine(frame, globalIndex, globalIndex === frames.length - 1, indent));
@@ -54,20 +54,20 @@ export function eventLine(event: CStackEvent, sequence: number): string {
 
   switch (event.type) {
     case 'call': {
-      const parent = event.parentFrameId === undefined ? '' : `  parent #${event.parentFrameId}`;
-      return `[${sequenceText}] + call    #${event.frameId}  ${head}   depth ${event.depth}${parent}`;
+      const parent = event.parentFrameId === undefined ? '' : `   父帧 #${event.parentFrameId}`;
+      return `[${sequenceText}] + 调用   帧#${event.frameId}  ${head}   第 ${event.depth + 1} 层${parent}`;
     }
     case 'return':
-      return `[${sequenceText}] - return  #${event.frameId}  ${head}   depth ${event.depth}`;
+      return `[${sequenceText}] - 返回   帧#${event.frameId}  ${head}   第 ${event.depth + 1} 层`;
     case 'line': {
       const locals = formatRecord(event.locals);
       const detail = locals.length > 0 ? `   {${locals}}` : '';
-      return `[${sequenceText}]   line    #${event.frameId}  ${head}${detail}`;
+      return `[${sequenceText}]   执行   帧#${event.frameId}  ${head}${detail}`;
     }
     case 'exception':
-      return `[${sequenceText}] ! exception  ${event.message ?? 'unknown problem'}`;
+      return `[${sequenceText}] ! 异常   ${event.message ?? '未知问题'}`;
     case 'exit':
-      return `[${sequenceText}] * exit    ${event.message ?? 'the program exited'}`;
+      return `[${sequenceText}] * 结束   ${event.message ?? '程序结束'}`;
     default:
       return `[${sequenceText}] ? ${String(event.type)}`;
   }

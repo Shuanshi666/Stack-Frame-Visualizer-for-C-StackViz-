@@ -179,7 +179,7 @@ export class StackVizSession implements vscode.Disposable {
     await fs.promises.mkdir(options.workdir, { recursive: true });
 
     const port = await this.server.start((event, rawLine) => this.handleMessage(event, rawLine));
-    this.output.appendLine(`StackViz: listening on 127.0.0.1:${port} (waiting for gdb)`);
+    this.output.appendLine(`StackViz：正在监听 127.0.0.1:${port}，等待 gdb 连回来…`);
 
     const gdbOptions = JSON.stringify({
       maxSteps: options.config.maxSteps,
@@ -212,15 +212,15 @@ export class StackVizSession implements vscode.Disposable {
       this.output.appendLine(`[gdb] ${error.message}`);
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         this.output.appendLine(
-          '[gdb] gdb was not found. Install it with: sudo apt update && sudo apt install -y gdb build-essential'
+          '[gdb] 没有找到 gdb。安装命令：sudo apt update && sudo apt install -y gdb build-essential'
         );
       }
-      this.finish('gdb could not be started');
+      this.finish('gdb 没能启动');
     });
     child.stdout?.on('data', (chunk: Buffer) => writePrefixedLines(this.output, 'gdb', chunk.toString()));
     child.stderr?.on('data', (chunk: Buffer) => writePrefixedLines(this.output, 'gdb', chunk.toString()));
     child.on('close', (code, signal) => {
-      this.finish(signal ? `gdb stopped by signal ${signal}` : `gdb stopped with exit code ${code}`);
+      this.finish(signal ? `gdb 被信号 ${signal} 结束` : `gdb 正常退出（退出码 ${code}）`);
     });
   }
 
@@ -231,11 +231,11 @@ export class StackVizSession implements vscode.Disposable {
     this.stopping = true;
     const child = this.child;
     if (child && child.exitCode === null && child.signalCode === null) {
-      this.output.appendLine('--- StackViz: stopping (SIGTERM) ---');
+      this.output.appendLine('--- StackViz：正在停止（SIGTERM）---');
       child.kill('SIGTERM');
       this.killTimer = setTimeout(() => {
         if (child.exitCode === null && child.signalCode === null) {
-          this.output.appendLine('--- StackViz: gdb did not stop, sending SIGKILL ---');
+          this.output.appendLine('--- StackViz：gdb 没有响应，改发 SIGKILL ---');
           child.kill('SIGKILL');
         }
       }, 1500);
@@ -267,12 +267,12 @@ export class StackVizSession implements vscode.Disposable {
 
   private handleMessage(event: unknown, rawLine: string): void {
     if (event === undefined || typeof event !== 'object') {
-      this.output.appendLine(`[stackviz] ignoring malformed event: ${rawLine.slice(0, 200)}`);
+      this.output.appendLine(`[stackviz] 跳过一条格式不对的数据：${rawLine.slice(0, 200)}`);
       return;
     }
     const typed = event as CStackEvent;
     if (typeof typed.type !== 'string' || typeof typed.frameId !== 'number') {
-      this.output.appendLine(`[stackviz] ignoring unknown event: ${rawLine.slice(0, 200)}`);
+      this.output.appendLine(`[stackviz] 跳过一条认不出的数据：${rawLine.slice(0, 200)}`);
       return;
     }
     this.model.apply(typed);
@@ -301,7 +301,7 @@ export class StackVizSession implements vscode.Disposable {
   private appendStack(): void {
     const frames = this.model.liveFrames();
     if (frames.length === 0) {
-      this.output.appendLine('          (call stack is empty)');
+      this.output.appendLine('          （调用栈是空的）');
       return;
     }
     for (const line of stackLines(frames, { indent: '          ', maxFrames: DEFAULT_MAX_PRINTED_FRAMES })) {
@@ -313,22 +313,22 @@ export class StackVizSession implements vscode.Disposable {
     const summary = this.model.summary();
     const counts = summary.counts;
     this.output.appendLine('');
-    this.output.appendLine('===== StackViz summary =====');
-    this.output.appendLine(`steps    : ${summary.steps}`);
+    this.output.appendLine('===== 本次记录小结 =====');
+    this.output.appendLine(`单步次数 : ${summary.steps}（程序每往前走一行算一步）`);
     this.output.appendLine(
-      `events   : ${summary.events} (call ${counts.call}, return ${counts.return}, ` +
-        `line ${counts.line}, exception ${counts.exception}, exit ${counts.exit})`
+      `事件总数 : ${summary.events}（调用 ${counts.call}、返回 ${counts.return}、` +
+        `执行 ${counts.line}、异常 ${counts.exception}、结束 ${counts.exit}）`
     );
-    this.output.appendLine(`max depth: ${summary.maxDepth}`);
-    this.output.appendLine(`duration : ${(summary.durationMs / 1000).toFixed(2)} s`);
-    this.output.appendLine(`ended    : ${reason}`);
+    this.output.appendLine(`最深栈深 : ${summary.maxDepth} 层`);
+    this.output.appendLine(`耗时     : ${(summary.durationMs / 1000).toFixed(2)} 秒`);
+    this.output.appendLine(`结束原因 : ${reason}`);
     if (summary.dropped > 0) {
-      this.output.appendLine(`note     : ${summary.dropped} oldest event(s) were dropped to keep memory bounded`);
+      this.output.appendLine(`提示     : 为了控制内存，最早的 ${summary.dropped} 条事件已被丢弃`);
     }
     for (const note of this.model.notes) {
-      this.output.appendLine(`note     : ${note}`);
+      this.output.appendLine(`提示     : ${note}`);
     }
-    this.output.appendLine('===== end of run =====');
+    this.output.appendLine('===== 记录结束 =====');
     this.output.appendLine('');
   }
 }

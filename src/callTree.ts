@@ -88,7 +88,7 @@ export class CallTreeDataProvider implements vscode.TreeDataProvider<FrameTreeNo
     const isTop = !this.model.ended && this.model.topFrameId() === frame.frameId;
     const exceptions = this.model.exceptionNotes(frame.frameId);
     item.id = `stackviz-frame-${frame.frameId}`;
-    const status = exceptions.length > 0 ? 'exception' : live ? '' : 'returned';
+    const status = exceptions.length > 0 ? '异常' : live ? '' : '已返回';
     item.description = `${prettyPath(frame.file)}:${frame.line}${status ? `  (${status})` : ''}`;
     item.tooltip = this.tooltipFor(frame, live, isTop);
     item.iconPath = new vscode.ThemeIcon(
@@ -103,7 +103,7 @@ export class CallTreeDataProvider implements vscode.TreeDataProvider<FrameTreeNo
     item.contextValue = exceptions.length > 0 ? 'stackvizExceptionFrame' : live ? 'stackvizLiveFrame' : 'stackvizReturnedFrame';
     item.command = {
       command: 'stackviz.showFrame',
-      title: 'Show frame details',
+      title: '查看这一帧的详情',
       arguments: [element]
     };
     return item;
@@ -112,21 +112,21 @@ export class CallTreeDataProvider implements vscode.TreeDataProvider<FrameTreeNo
   private tooltipFor(frame: FrameInfo, live: boolean, isTop: boolean): vscode.MarkdownString {
     const tooltip = new vscode.MarkdownString();
     tooltip.appendMarkdown(`**${frame.functionName}(${formatRecord(frame.args)})**\n\n`);
-    tooltip.appendMarkdown(`location: \`${prettyPath(frame.file)}:${frame.line}\`\n\n`);
+    tooltip.appendMarkdown(`代码位置：\`${prettyPath(frame.file)}:${frame.line}\`\n\n`);
     tooltip.appendMarkdown(
-      `frame \`#${frame.frameId}\` · depth ${frame.depth} · parent ` +
-        `${frame.parentFrameId === undefined ? '(none)' : '#' + frame.parentFrameId}\n\n`
+      `帧 \`#${frame.frameId}\` · 栈里第 ${frame.depth + 1} 层 · ` +
+        `父帧 ${frame.parentFrameId === undefined ? '（没有，它是最底层）' : '#' + frame.parentFrameId}\n\n`
     );
-    tooltip.appendMarkdown(`status: ${isTop ? 'active - top of stack' : live ? 'active' : 'returned'}\n\n`);
+    tooltip.appendMarkdown(`状态：${isTop ? '正在执行（栈顶）' : live ? '还在调用栈上' : '已经返回'}\n\n`);
 
     const locals = formatRecord(frame.locals);
     if (locals.length > 0) {
-      tooltip.appendMarkdown(`locals: \`${locals}\`\n\n`);
+      tooltip.appendMarkdown(`局部变量：\`${locals}\`\n\n`);
     }
     for (const note of this.model.exceptionNotes(frame.frameId)) {
-      tooltip.appendMarkdown(`exception: \`${note}\`\n\n`);
+      tooltip.appendMarkdown(`异常：\`${note}\`\n\n`);
     }
-    tooltip.appendMarkdown(`_click to print this frame in the StackViz output channel_`);
+    tooltip.appendMarkdown(`_点一下，会在 StackViz 输出面板里打印这一帧的详情，并跳到源码行_`);
     return tooltip;
   }
 }

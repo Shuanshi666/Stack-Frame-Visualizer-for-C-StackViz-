@@ -120,7 +120,7 @@ export class TimelinePanel implements vscode.Disposable {
     }
     const panel = vscode.window.createWebviewPanel(
       'stackviz.timeline',
-      'StackViz Replay',
+      'StackViz 回放',
       // Beside the editor, and without stealing the cursor from the tree.
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       {
@@ -371,7 +371,7 @@ export class TimelinePanel implements vscode.Disposable {
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StackViz Replay</title>
+<title>StackViz 回放</title>
 <style>
   body {
     font-family: var(--vscode-font-family);
@@ -433,8 +433,8 @@ export class TimelinePanel implements vscode.Disposable {
 </style>
 </head>
 <body>
-  <h1>StackViz Replay</h1>
-  <div class="meta" id="meta">no recording yet</div>
+  <h1>StackViz 回放</h1>
+  <div class="meta" id="meta">还没有记录</div>
 
   <div class="timeline">
     <input id="slider" type="range" min="0" max="0" value="0" step="1">
@@ -443,28 +443,28 @@ export class TimelinePanel implements vscode.Disposable {
   </div>
 
   <div class="controls">
-    <button data-action="first" title="First event">&#9198;</button>
-    <button data-action="step" data-delta="-1" title="Previous event">&#9664;</button>
-    <button data-action="step" data-delta="1" title="Next event">&#9654;</button>
-    <button data-action="last" title="Last event">&#9197;</button>
+    <button data-action="first" title="跳到第一条事件">&#9198;</button>
+    <button data-action="step" data-delta="-1" title="上一步">&#9664;</button>
+    <button data-action="step" data-delta="1" title="下一步">&#9654;</button>
+    <button data-action="last" title="跳到最后一条事件">&#9197;</button>
     <span class="sep"></span>
-    <button data-action="nextCall" title="Jump to the next call">next call</button>
-    <button data-action="nextReturn" title="Jump to the next return">next return</button>
-    <button data-action="nextException" title="Jump to the next exception">next exception</button>
+    <button data-action="nextCall" title="跳到下一次函数调用">下次调用</button>
+    <button data-action="nextReturn" title="跳到下一次函数返回">下次返回</button>
+    <button data-action="nextException" title="跳到下一条异常">下次异常</button>
     <span class="sep"></span>
-    <button data-action="play" id="playButton" class="primary">play</button>
-    <button data-action="follow" title="Jump to the newest event">follow live</button>
+    <button data-action="play" id="playButton" class="primary">播放</button>
+    <button data-action="follow" title="跳回最新的事件">跟随最新</button>
     <span class="sep"></span>
-    <button data-action="export">export</button>
-    <button data-action="import">import</button>
+    <button data-action="export">导出</button>
+    <button data-action="import">导入</button>
   </div>
 
   <div class="current" id="current"></div>
 
-  <h2>Call stack <span class="meta" id="stackCount"></span></h2>
+  <h2>当前调用栈 <span class="meta" id="stackCount"></span></h2>
   <ol class="stack" id="stackList"></ol>
 
-  <h2>Exceptions</h2>
+  <h2>异常</h2>
   <ul class="exceptions" id="exceptions"></ul>
 
 <script nonce="${nonce}">
@@ -519,10 +519,10 @@ export class TimelinePanel implements vscode.Disposable {
     if (!dragging) {
       slider.value = String(empty ? 0 : next.cursor);
     }
-    meta.textContent = (next.labels.source || 'StackViz') + (empty ? '' : ' - ' + next.count + ' events');
-    indexLabel.textContent = empty ? 'no events' : 'event ' + next.position + ' / ' + next.count;
-    followLabel.textContent = next.following ? (next.playing ? 'playing' : 'live') : 'replaying';
-    playButton.textContent = next.playing ? 'pause' : 'play';
+    meta.textContent = (next.labels.source || 'StackViz') + (empty ? '' : ' · 共 ' + next.count + ' 条事件');
+    indexLabel.textContent = empty ? '还没有事件' : '第 ' + next.position + ' / ' + next.count + ' 条';
+    followLabel.textContent = next.following ? (next.playing ? '正在自动播放' : '实时') : '回放中';
+    playButton.textContent = next.playing ? '暂停' : '播放';
 
     const current = next.current;
     currentBox.className = 'current ' + (current ? current.type : '');
@@ -533,22 +533,22 @@ export class TimelinePanel implements vscode.Disposable {
 
     stackCount.textContent = next.stack.length === 0
       ? ''
-      : '(' + next.stack.length + ' frame' + (next.stack.length === 1 ? '' : 's') +
-        (next.hiddenFrames > 0 ? ', ' + next.hiddenFrames + ' hidden' : '') + ')';
+      : '（共 ' + next.stack.length + ' 帧' +
+        (next.hiddenFrames > 0 ? '，省略 ' + next.hiddenFrames + ' 帧' : '') + '）';
     if (next.stack.length === 0) {
-      stackList.innerHTML = '<li class="empty">call stack is empty at this point</li>';
+      stackList.innerHTML = '<li class="empty">这一刻调用栈是空的</li>';
     } else {
       stackList.innerHTML = next.stack.map(function (row) {
         const locals = row.locals ? '  {' + escapeHtml(row.locals) + '}' : '';
-        const status = row.status === 'top' ? ' <span class="status">&lt;-- top</span>' : '';
-        return '<li class="' + escapeHtml(row.status) + '" data-frame="' + row.frameId + '" title="click to print this frame">' +
+        const status = row.status === 'top' ? ' <span class="status">&lt;-- 栈顶</span>' : '';
+        return '<li class="' + escapeHtml(row.status) + '" data-frame="' + row.frameId + '" title="点一下打印这一帧的详情，并跳到源码行">' +
           '&nbsp;'.repeat(row.index * 2) + '#' + row.index + ' ' + escapeHtml(row.functionName) +
           '(' + escapeHtml(row.args) + ')  ' + escapeHtml(row.location) + locals + status + '</li>';
       }).join('');
     }
 
     if (next.exceptions.length === 0) {
-      exceptionsList.innerHTML = '<li class="empty">none</li>';
+      exceptionsList.innerHTML = '<li class="empty">没有</li>';
     } else {
       exceptionsList.innerHTML = next.exceptions.map(function (mark) {
         return '<li data-index="' + mark.index + '"><span class="meta">[' + String(mark.index).padStart(4, '0') + ']</span> ' +

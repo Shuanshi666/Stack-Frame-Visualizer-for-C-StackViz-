@@ -1,5 +1,10 @@
 # Stack Frame Visualizer for C（StackViz）— M4
 
+> 英文版：[README_en.md](README_en.md)（欢迎英文母语的朋友帮忙补充改进）
+>
+> 注意：插件的**界面文字目前是中文**（面向国内新手）。如果你需要英文界面，
+> 欢迎在 README_en.md 对应的 issue/PR 里提出来。
+
 面向 C 语言初学者的递归可视化插件：打开一个 `.c` 文件，显式触发一条命令，
 插件就会用 `gcc -g -O0` 编译、启动 `gdb` 自动单步、解析调用栈，并通过本地
 TCP 把 NDJSON 事件送回来，在 OutputChannel 里打印可读的调用栈。

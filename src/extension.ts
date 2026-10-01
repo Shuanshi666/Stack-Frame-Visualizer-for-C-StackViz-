@@ -71,46 +71,46 @@ class StackVizController implements vscode.Disposable {
   public async exportRecording(): Promise<void> {
     const events = this.model.exportEvents();
     if (events.length === 0) {
-      void vscode.window.showInformationMessage('StackViz: there is no recording to export yet.');
+      void vscode.window.showInformationMessage('StackViz：还没有可以导出的记录，先运行一次。');
       return;
     }
     const folder = vscode.workspace.workspaceFolders?.[0];
     const target = await vscode.window.showSaveDialog({
-      title: 'StackViz: export recording',
+      title: 'StackViz：导出记录',
       defaultUri: folder ? vscode.Uri.joinPath(folder.uri, defaultRecordingName()) : undefined,
-      filters: { 'StackViz recording': ['jsonl'] },
-      saveLabel: 'Export'
+      filters: { 'StackViz 记录文件': ['jsonl'] },
+      saveLabel: '导出'
     });
     if (!target) {
       return;
     }
     await writeRecording(target, events);
-    this.output.appendLine(`StackViz: exported ${events.length} event(s) to ${target.fsPath}`);
+    this.output.appendLine(`StackViz：已把 ${events.length} 条事件导出到 ${target.fsPath}`);
     void vscode.window.showInformationMessage(
-      `StackViz: exported ${events.length} event(s) to ${path.basename(target.fsPath)}.`
+      `StackViz：已导出 ${events.length} 条事件到 ${path.basename(target.fsPath)}。`
     );
   }
 
   public async importRecording(): Promise<void> {
     const picked = await vscode.window.showOpenDialog({
-      title: 'StackViz: import a recording',
+      title: 'StackViz：导入记录文件',
       canSelectFiles: true,
       canSelectFolders: false,
       canSelectMany: false,
-      openLabel: 'Import',
-      filters: { 'StackViz recording': ['jsonl'] }
+      openLabel: '导入',
+      filters: { 'StackViz 记录文件': ['jsonl'] }
     });
     if (!picked || picked.length === 0) {
       return;
     }
     if (this.session) {
-      this.output.appendLine('--- StackViz: stopping the live run before importing ---');
+      this.output.appendLine('--- StackViz：导入前先停止正在进行的记录 ---');
       this.session.stop();
       this.session = undefined;
     }
     const parsed = await readRecording(picked[0]);
     if (parsed.events.length === 0) {
-      throw new Error(`No StackViz events found in ${path.basename(picked[0].fsPath)}.`);
+      throw new Error(`在 ${path.basename(picked[0].fsPath)} 里没有找到 StackViz 事件。`);
     }
     this.model.loadRecording(parsed.events);
     this.labels = { source: path.basename(picked[0].fsPath), binary: '' };
@@ -118,8 +118,8 @@ class StackVizController implements vscode.Disposable {
     this.syncContext();
     this.openVisualizer();
     this.output.appendLine(
-      `StackViz: imported ${parsed.events.length} event(s) from ${picked[0].fsPath}` +
-        (parsed.skipped > 0 ? ` (${parsed.skipped} line(s) skipped)` : '')
+      `StackViz：已从 ${picked[0].fsPath} 导入 ${parsed.events.length} 条事件` +
+        (parsed.skipped > 0 ? `（跳过 ${parsed.skipped} 行）` : '')
     );
   }
 
@@ -170,10 +170,10 @@ class StackVizController implements vscode.Disposable {
     this.output.appendLine('');
 
     if (report.ok) {
-      void vscode.window.showInformationMessage('StackViz: the environment looks good (see the StackViz output).');
+      void vscode.window.showInformationMessage('StackViz：环境检查通过，详情见 StackViz 输出面板。');
       return;
     }
-    await this.offerInstall('StackViz: something is missing - see the StackViz output for details.');
+    await this.offerInstall('StackViz：缺少必要的工具，详情见 StackViz 输出面板。');
   }
 
   /** "StackViz: Open Example" - bundled programs, ready to run. */
@@ -185,7 +185,7 @@ class StackVizController implements vscode.Disposable {
         detail: example.description,
         example
       })),
-      { title: 'StackViz: open a built-in example', placeHolder: 'the file is copied into .stackviz/examples/' }
+      { title: 'StackViz：打开内置示例', placeHolder: '示例会被拷贝到 .stackviz/examples/ 目录' }
     );
     if (!picked) {
       return;
@@ -196,10 +196,10 @@ class StackVizController implements vscode.Disposable {
     const uri = await materializeExample(this.context, picked.example, root);
     const document = await vscode.workspace.openTextDocument(uri);
     await vscode.window.showTextDocument(document, { preview: false });
-    this.output.appendLine(`StackViz: example opened at ${uri.fsPath}`);
+    this.output.appendLine(`StackViz：示例已打开：${uri.fsPath}`);
 
     const action = await vscode.window.showInformationMessage(
-      `StackViz: ${picked.example.file} is ready. Change the depth and run it!`,
+      `StackViz：${picked.example.file} 已就绪，改改递归深度再跑一次试试！`,
       'Compile and Visualize Recursion'
     );
     if (action === 'Compile and Visualize Recursion') {
@@ -208,17 +208,17 @@ class StackVizController implements vscode.Disposable {
   }
 
   private async offerInstall(message: string): Promise<void> {
-    const action = await vscode.window.showErrorMessage(message, 'Copy Install Command');
-    if (action === 'Copy Install Command') {
+    const action = await vscode.window.showErrorMessage(message, '复制安装命令');
+    if (action === '复制安装命令') {
       await vscode.env.clipboard.writeText(INSTALL_COMMAND);
-      void vscode.window.showInformationMessage(`StackViz: copied "${INSTALL_COMMAND}" to the clipboard.`);
+      void vscode.window.showInformationMessage(`StackViz：已把「${INSTALL_COMMAND}」复制到剪贴板。`);
     }
   }
 
   public async compileAndVisualize(): Promise<void> {
     try {
       if (this.session) {
-        this.output.appendLine('--- StackViz: stopping the previous run ---');
+        this.output.appendLine('--- StackViz：先停止上一次记录 ---');
         this.session.stop();
         this.session = undefined;
       }
@@ -251,7 +251,7 @@ class StackVizController implements vscode.Disposable {
   public async visualizeExistingBinary(): Promise<void> {
     try {
       if (this.session) {
-        this.output.appendLine('--- StackViz: stopping the previous run ---');
+        this.output.appendLine('--- StackViz：先停止上一次记录 ---');
         this.session.stop();
         this.session = undefined;
       }
@@ -281,15 +281,15 @@ class StackVizController implements vscode.Disposable {
     this.tree?.refreshNow();
     this.timeline?.refreshNow();
     this.syncContext();
-    this.output.appendLine('StackViz: cleared the output channel and the recording.');
+    this.output.appendLine('StackViz：已清空输出面板和内存里的记录。');
     if (running) {
-      this.output.appendLine('StackViz: the current run is still active; the stack is rebuilt from the next events.');
+      this.output.appendLine('StackViz：当前记录还在进行，调用栈会从后面的事件重新建立。');
     }
   }
 
   public stop(): void {
     if (!this.session) {
-      this.output.appendLine('StackViz: nothing is running.');
+      this.output.appendLine('StackViz：现在没有正在进行的记录。');
       return;
     }
     this.session.stop();
@@ -299,10 +299,10 @@ class StackVizController implements vscode.Disposable {
   public printCurrentStack(): void {
     this.output.show(true);
     this.output.appendLine('');
-    this.output.appendLine(`===== current stack (${new Date().toISOString()}) =====`);
+    this.output.appendLine(`===== 当前调用栈（${new Date().toISOString()}）=====`);
     const frames = this.model.liveFrames();
     if (frames.length === 0) {
-      this.output.appendLine(this.session ? '(no frame recorded yet)' : '(no recording yet - run a StackViz command first)');
+      this.output.appendLine(this.session ? '（还没有记录到任何一帧）' : '（还没有记录，先运行一条 StackViz 命令）');
       return;
     }
     for (const line of stackLines(frames, { indent: '  ' })) {
@@ -318,7 +318,7 @@ class StackVizController implements vscode.Disposable {
   public async showFrame(node?: FrameTreeNode): Promise<void> {
     if (!node) {
       void vscode.window.showInformationMessage(
-        'StackViz: click a frame in the "StackViz" call tree to see its variables and line.'
+        'StackViz：请先在左栏 StackViz 调用树里点一个节点，就能看到这一帧的变量和行号。'
       );
       return;
     }
@@ -411,15 +411,15 @@ class StackVizController implements vscode.Disposable {
     this.timeline?.setLabels(this.labels);
     this.output.show(true);
     this.output.appendLine('');
-    this.output.appendLine(`===== StackViz run ${new Date().toISOString()} =====`);
-    this.output.appendLine(`source : ${sourceFile ?? '(existing binary, nothing is compiled)'}`);
-    this.output.appendLine(`binary : ${binaryPath}`);
-    this.output.appendLine(`workdir: ${root}`);
+    this.output.appendLine(`===== StackViz 记录开始 ${new Date().toISOString()} =====`);
+    this.output.appendLine(`源文件   : ${sourceFile ?? '（用已有的可执行文件，这次不编译）'}`);
+    this.output.appendLine(`可执行文件: ${binaryPath}`);
+    this.output.appendLine(`工作目录 : ${root}`);
     this.output.appendLine(
-      `limits : maxSteps=${config.maxSteps} maxDepth=${config.maxDepth} ` +
-        `recordLocals=${config.recordLocals} maxArrayItems=${config.maxArrayItems}`
+      `限制     : 最多 ${config.maxSteps} 步、最深 ${config.maxDepth} 层、` +
+        `读取局部变量=${config.recordLocals}、数组最多显示 ${config.maxArrayItems} 项`
     );
-    this.output.appendLine(`sources: ${sourceFiles.length} C file(s) are treated as user code`);
+    this.output.appendLine(`用户代码 : ${sourceFiles.length} 个 C 文件算作你自己的代码，库函数帧会被隐藏`);
 
     if (!this.printedLegend) {
       this.printedLegend = true;
@@ -516,7 +516,7 @@ class StackVizController implements vscode.Disposable {
   ): Promise<string | undefined> {
     if (config.compileMode === 'plugin') {
       const result = await compileCFile(sourceFile, outputBinary, root, config, this.output);
-      this.output.appendLine(`StackViz: compiled ${prettyPath(result.binaryPath)}`);
+      this.output.appendLine(`StackViz：编译完成 → ${prettyPath(result.binaryPath)}`);
       return result.binaryPath;
     }
     if (config.compileMode === 'user') {
@@ -524,32 +524,32 @@ class StackVizController implements vscode.Disposable {
     }
 
     const compileItem: vscode.QuickPickItem = {
-      label: '$(tools) Compile with the plugin',
-      description: `${config.gccPath} -g -O0 ... -o .stackviz/a.out`
+      label: '$(tools) 用插件自己编译',
+      description: `执行 ${config.gccPath} -g -O0 ... -o .stackviz/a.out`
     };
     const existingItem: vscode.QuickPickItem = {
-      label: '$(file-binary) Use an existing executable',
-      description: config.binaryPath.length > 0 ? config.binaryPath : 'stackviz.binaryPath is not set'
+      label: '$(file-binary) 用我已经编译好的可执行文件',
+      description: config.binaryPath.length > 0 ? config.binaryPath : '尚未设置 stackviz.binaryPath'
     };
     const picked = await vscode.window.showQuickPick([compileItem, existingItem], {
-      title: 'StackViz: how should the executable be produced?',
-      placeHolder: 'Compile with the plugin, or run a binary you built yourself'
+      title: 'StackViz：这次要运行的可执行文件从哪来？',
+      placeHolder: '让插件编译，或直接跑你自己编译好的二进制'
     });
     if (!picked) {
       return undefined;
     }
     if (picked === compileItem) {
       const result = await compileCFile(sourceFile, outputBinary, root, config, this.output);
-      this.output.appendLine(`StackViz: compiled ${prettyPath(result.binaryPath)}`);
+      this.output.appendLine(`StackViz：编译完成 → ${prettyPath(result.binaryPath)}`);
       return result.binaryPath;
     }
 
     let candidate = config.binaryPath;
     if (candidate.length === 0) {
       const entered = await vscode.window.showInputBox({
-        title: 'StackViz: path of the executable to run',
+        title: 'StackViz：要运行的可执行文件路径',
         value: path.join(root, '.stackviz', 'a.out'),
-        prompt: 'POSIX path of a binary compiled with -g -O0'
+        prompt: '用 -g -O0 编译出来的可执行文件，POSIX 路径'
       });
       if (!entered) {
         return undefined;
@@ -561,18 +561,18 @@ class StackVizController implements vscode.Disposable {
 
   private requireBinary(candidate: string, root: string): string {
     if (candidate.length === 0) {
-      throw new Error('stackviz.binaryPath is empty. Set it, or use the "plugin" compile mode.');
+      throw new Error('stackviz.binaryPath 是空的：请设置它，或把 stackviz.compileMode 改成 "plugin" 让插件自己编译。');
     }
     const resolved = path.isAbsolute(candidate) ? candidate : path.join(root, candidate);
     if (!fs.existsSync(resolved)) {
-      throw new Error(`The executable does not exist: ${resolved}`);
+      throw new Error(`这个可执行文件不存在：${resolved}`);
     }
     const stats = fs.statSync(resolved);
     if (stats.isDirectory()) {
-      throw new Error(`That is a directory, not an executable: ${resolved}`);
+      throw new Error(`这是一个目录，不是可执行文件：${resolved}`);
     }
     if ((stats.mode & 0o111) === 0) {
-      throw new Error(`The file is not executable: ${resolved} (try: chmod +x "${resolved}")`);
+      throw new Error(`这个文件没有可执行权限：${resolved}（可以试试 chmod +x "${resolved}"）`);
     }
     return resolved;
   }
@@ -587,7 +587,7 @@ class StackVizController implements vscode.Disposable {
 
     if (config.binaryPath.length > 0) {
       candidates.push({
-        label: '$(file-binary) stackviz.binaryPath',
+        label: '$(file-binary) 设置里的 stackviz.binaryPath',
         description: config.binaryPath,
         fsPath: config.binaryPath
       });
@@ -603,14 +603,14 @@ class StackVizController implements vscode.Disposable {
       }
     }
     candidates.push({
-      label: '$(folder-opened) Choose another executable...',
-      description: 'open a file dialog',
+      label: '$(folder-opened) 选别的可执行文件…',
+      description: '打开文件选择框',
       browse: true
     });
 
     const picked = await vscode.window.showQuickPick(candidates, {
-      title: 'StackViz: which executable should be visualized?',
-      placeHolder: 'The binary must be compiled with -g -O0; StackViz never compiles in this command'
+      title: 'StackViz：要可视化哪个可执行文件？',
+      placeHolder: '要求用 -g -O0 编译；这条命令不会帮你编译'
     });
     if (!picked) {
       return undefined;
@@ -620,8 +620,8 @@ class StackVizController implements vscode.Disposable {
         canSelectFiles: true,
         canSelectFolders: false,
         canSelectMany: false,
-        openLabel: 'Visualize this executable',
-        title: 'StackViz: choose an executable (built with -g -O0)'
+        openLabel: '可视化这个文件',
+        title: 'StackViz：选择一个可执行文件（用 -g -O0 编译）'
       });
       if (!chosen || chosen.length === 0) {
         return undefined;
@@ -633,13 +633,13 @@ class StackVizController implements vscode.Disposable {
 
   private reportError(error: unknown): void {
     const message = error instanceof Error ? error.message : String(error);
-    this.output.appendLine(`StackViz error: ${message}`);
+    this.output.appendLine(`StackViz 出错：${message}`);
     this.output.show(true);
     if (error instanceof ToolchainError) {
-      void this.offerInstall(`StackViz: ${message}`);
+      void this.offerInstall(`StackViz：${message}`);
       return;
     }
-    void vscode.window.showErrorMessage(`StackViz: ${message}`);
+    void vscode.window.showErrorMessage(`StackViz：${message}`);
   }
 
   private async pickSourceFile(): Promise<string | undefined> {
@@ -650,7 +650,7 @@ class StackVizController implements vscode.Disposable {
 
     const found = await vscode.workspace.findFiles('**/*.c', '**/{node_modules,.git,out,.stackviz}/**', 50);
     if (found.length === 0) {
-      void vscode.window.showErrorMessage('StackViz: no .c file found. Open a C file first.');
+      void vscode.window.showErrorMessage('StackViz：没找到 .c 文件，请先打开一个 C 源文件。');
       return undefined;
     }
     if (found.length === 1) {
@@ -658,7 +658,7 @@ class StackVizController implements vscode.Disposable {
     }
     const picked = await vscode.window.showQuickPick(
       found.map((uri) => ({ label: vscode.workspace.asRelativePath(uri, false), uri })),
-      { title: 'StackViz: choose the C file to visualize' }
+      { title: 'StackViz：选择要可视化的 C 文件' }
     );
     return picked?.uri.fsPath;
   }
