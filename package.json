@@ -1,0 +1,286 @@
+{
+  "name": "stackviz-c",
+  "displayName": "Stack Frame Visualizer for C",
+  "description": "Compile, auto-step and visualize the call stack of a C program, so that recursion becomes visible.",
+  "version": "0.1.0",
+  "publisher": "stackviz",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Debuggers",
+    "Visualization"
+  ],
+  "keywords": [
+    "c",
+    "recursion",
+    "call stack",
+    "gdb",
+    "teaching"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onCommand:stackviz.compileAndVisualize",
+    "onCommand:stackviz.visualizeExistingBinary",
+    "onCommand:stackviz.stop",
+    "onCommand:stackviz.printCurrentStack",
+    "onCommand:stackviz.clear",
+    "onCommand:stackviz.openVisualizer",
+    "onCommand:stackviz.exportRecording",
+    "onCommand:stackviz.importRecording",
+    "onCommand:stackviz.checkEnvironment",
+    "onCommand:stackviz.openExample",
+    "onView:stackviz.callTree"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "stackviz.compileAndVisualize",
+        "title": "StackViz: Compile and Visualize Recursion",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.visualizeExistingBinary",
+        "title": "StackViz: Visualize Existing Binary",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.stop",
+        "title": "StackViz: Stop",
+        "category": "StackViz",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "stackviz.printCurrentStack",
+        "title": "StackViz: Print Current Stack",
+        "category": "StackViz",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "stackviz.clear",
+        "title": "StackViz: Clear",
+        "category": "StackViz",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "stackviz.openVisualizer",
+        "title": "StackViz: Open Visualizer",
+        "category": "StackViz",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "stackviz.exportRecording",
+        "title": "StackViz: Export Recording",
+        "category": "StackViz",
+        "icon": "$(export)"
+      },
+      {
+        "command": "stackviz.importRecording",
+        "title": "StackViz: Import Recording",
+        "category": "StackViz",
+        "icon": "$(import)"
+      },
+      {
+        "command": "stackviz.replayPrev",
+        "title": "StackViz: Replay: Previous Event",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.replayNext",
+        "title": "StackViz: Replay: Next Event",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.replayNextCall",
+        "title": "StackViz: Replay: Next Call",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.replayNextReturn",
+        "title": "StackViz: Replay: Next Return",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.replayFollow",
+        "title": "StackViz: Replay: Follow Latest",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.checkEnvironment",
+        "title": "StackViz: Check Environment",
+        "category": "StackViz"
+      },
+      {
+        "command": "stackviz.openExample",
+        "title": "StackViz: Open Example",
+        "category": "StackViz"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "stackviz",
+          "title": "StackViz",
+          "icon": "media/stackviz.svg"
+        }
+      ]
+    },
+    "views": {
+      "stackviz": [
+        {
+          "id": "stackviz.callTree",
+          "name": "Call Tree",
+          "contextualTitle": "StackViz Call Tree",
+          "icon": "media/stackviz.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "stackviz.callTree",
+        "contents": "No recording yet.\n[Compile and Visualize Recursion](command:stackviz.compileAndVisualize)\n[Visualize Existing Binary](command:stackviz.visualizeExistingBinary)\nEvery function invocation becomes its own node, so a recursive function appears once per active or finished call."
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "stackviz.openVisualizer",
+          "when": "view == stackviz.callTree",
+          "group": "navigation@0"
+        },
+        {
+          "command": "stackviz.stop",
+          "when": "view == stackviz.callTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "stackviz.clear",
+          "when": "view == stackviz.callTree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "stackviz.printCurrentStack",
+          "when": "view == stackviz.callTree",
+          "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "stackviz.exportRecording",
+          "when": "stackviz.hasRecording"
+        },
+        {
+          "command": "stackviz.replayPrev",
+          "when": "stackviz.hasRecording"
+        },
+        {
+          "command": "stackviz.replayNext",
+          "when": "stackviz.hasRecording"
+        },
+        {
+          "command": "stackviz.replayNextCall",
+          "when": "stackviz.hasRecording"
+        },
+        {
+          "command": "stackviz.replayNextReturn",
+          "when": "stackviz.hasRecording"
+        },
+        {
+          "command": "stackviz.replayFollow",
+          "when": "stackviz.hasRecording"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Stack Frame Visualizer for C",
+      "properties": {
+        "stackviz.compileMode": {
+          "type": "string",
+          "enum": [
+            "plugin",
+            "user",
+            "ask"
+          ],
+          "enumDescriptions": [
+            "The extension always compiles the C file with gcc (-g -O0).",
+            "The extension never compiles; it runs the executable given by stackviz.binaryPath.",
+            "Ask with a QuickPick every time the visualize command runs."
+          ],
+          "default": "ask",
+          "markdownDescription": "How the extension obtains the executable to run. Only relevant for `StackViz: Compile and Visualize Recursion`.",
+          "scope": "resource"
+        },
+        "stackviz.binaryPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path of an already compiled executable, used when `stackviz.compileMode` is `user` (or picked in `ask` mode). POSIX path.",
+          "scope": "resource"
+        },
+        "stackviz.extraCompilerArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra arguments appended to the plugin compile command.",
+          "scope": "resource"
+        },
+        "stackviz.gccPath": {
+          "type": "string",
+          "default": "gcc",
+          "description": "gcc executable used by the plugin compile mode.",
+          "scope": "resource"
+        },
+        "stackviz.gdbPath": {
+          "type": "string",
+          "default": "gdb",
+          "description": "gdb executable used to run and single-step the program.",
+          "scope": "resource"
+        },
+        "stackviz.maxSteps": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1,
+          "description": "Maximum number of single steps recorded in one run.",
+          "scope": "resource"
+        },
+        "stackviz.maxDepth": {
+          "type": "number",
+          "default": 100,
+          "minimum": 1,
+          "description": "Maximum call-stack depth that is tracked and reported.",
+          "scope": "resource"
+        },
+        "stackviz.recordLocals": {
+          "type": "boolean",
+          "default": true,
+          "description": "Read arguments and local variables for the top frame of every step.",
+          "scope": "resource"
+        },
+        "stackviz.maxArrayItems": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "description": "Maximum number of array elements shown in a variable preview.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "1.85.0",
+    "typescript": "^5.4.5"
+  }
+}
