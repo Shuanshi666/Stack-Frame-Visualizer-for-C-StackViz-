@@ -962,7 +962,10 @@ def configure_gdb():
         "set print frame-arguments none",
         # Step over functions without debug information (libc, crt, ...).
         "set step-mode off",
-        "set auto-load safe-path /",
+        # Never run scripts that a binary's debug info points at: the extension
+        # loads this file explicitly with "gdb -x", so auto-loading is not
+        # needed and leaving it enabled would be a way to run arbitrary code.
+        "set auto-load off",
     ):
         try:
             gdb.execute(command)

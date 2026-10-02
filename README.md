@@ -1,5 +1,8 @@
 # Stack Frame Visualizer for C（StackViz）— M4
 
+[![tests](https://github.com/Shuanshi666/Stack-Frame-Visualizer-for-C-StackViz-/actions/workflows/test.yml/badge.svg)](https://github.com/Shuanshi666/Stack-Frame-Visualizer-for-C-StackViz-/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > 英文版：[README_en.md](README_en.md)（欢迎英文母语的朋友帮忙补充改进）
 >
 > 注意：插件的**界面文字目前是中文**（面向国内新手）。如果你需要英文界面，
@@ -56,6 +59,8 @@ examples/factorial.c          内置示例：线性递归（factorial + sum_to�
 examples/fibonacci.c          内置示例：树状递归（调用树会分叉）
 examples/mutual_recursion.c   内置示例：互递归（is_even / is_odd 交替）
 examples/deep_recursion.c     内置示例：40 层深栈
+test/                         测试：fixtures（C 程序）、helpers（vscode stub / 驱动封装）、unit、integration、slow
+LICENSE                       MIT（Copyright (c) 2026 Shuanshi）
 .vscode/launch.json           F5 启动 Extension Development Host
 .vscode/tasks.json            F5 前自动 `npm run compile`
 .stackviz/                    运行期目录（a.out 等临时文件，已 gitignore）
@@ -325,9 +330,35 @@ note     : the program exited with code 0
 | 扩展端处理这 5011 个事件（模型 + 调用树 + 面板状态） | — | **34 ms**，单次最长 9.7 ms |
 
 正确性不靠感觉：把 `STACKVIZ_SNAPSHOT=full` 塞进 `STACKVIZ_OPTIONS` 就能让驱动
-退回"每步完整走栈"的实现。测试会把两种模式在 9 个场景（四个内置示例、变量预览
-程序、开关 `recordLocals`、1000 层、两种 `maxDepth` 截断）下逐事件比对，
-并且核对调用事件数（例如 `fib(6)` 必须是 26 次调用：main + 25 次 `fib`）。
+退回"每步完整走栈"的实现；`npm test` 会把两种模式在 10 组场景下逐事件比对，
+并核对调用事件数（例如 `fib(6)` 必须是 26 次调用：main + 25 次 `fib`）。
+细节见下面的"测试与 CI"。
+
+## 测试与 CI
+
+仓库里带了一套可以直接跑的测试（不需要打开 VSCode 窗口：用 stub 替换掉 `vscode`
+模块，直接驱动真实的扩展代码）：
+
+```bash
+npm install
+npm test                 # 单元 + 集成，本机约 10 秒
+npm run test:unit        # 纯 Node：记录文件往返、状态机/回放、文本渲染、驱动脚本的静态约束
+npm run test:integration # 真跑 gcc + gdb（见下）
+npm run test:slow        # 可选：1000 帧深 / 5000 步的性能预算（本机约 3.4 秒）
+```
+
+- `test:unit` 里有一条**防复发的静态检查**：驱动脚本中不允许再出现
+  `set auto-load safe-path /`（那会掀掉 gdb 的一层安全保护），必须保持
+  `set auto-load off`。
+- `test:integration` 覆盖：四个内置示例与**对抗用例**（同一行两次同名调用、
+  循环头就在函数首行、往回 `goto`）、变量预览规则、`maxDepth` 截断、库函数帧过滤、
+  以及"调用树分叉 / 帧详情 / 回放滑块 / 导出导入 / 环境自检 / 内置示例"这些端到端行为。
+- 最关键的一张安全网是 `test/integration/differential.test.js`：让"快速路径"和
+  "每步完整走栈"（`snapshot: "full"`）跑同一批程序，**逐事件比对必须完全一致**，
+  并核对调用次数。那些"聪明但冒险"的捷径一旦判断错人，这里会立刻变红。
+- 没装 gcc / gdb 的机器上，集成测试会**跳过并打印原因**，不会假装通过。
+- GitHub Actions（`.github/workflows/test.yml`）在每次 push / PR 上装好
+  `build-essential` + `gdb`，跑一遍 `npm test`，结果就是 README 顶部那个徽章。
 
 ## 配置项
 

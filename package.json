@@ -135,7 +135,7 @@
       "stackviz": [
         {
           "id": "stackviz.callTree",
-          "name": "调用树",
+          "name": "\u8c03\u7528\u6811",
           "contextualTitle": "StackViz Call Tree",
           "icon": "media/stackviz.svg"
         }
@@ -144,7 +144,7 @@
     "viewsWelcome": [
       {
         "view": "stackviz.callTree",
-        "contents": "还没有记录。\n[编译并可视化递归](command:stackviz.compileAndVisualize)\n[可视化已有的可执行文件](command:stackviz.visualizeExistingBinary)\n每调用一次函数就是一个节点，所以递归的每一层都是独立的节点。"
+        "contents": "\u8fd8\u6ca1\u6709\u8bb0\u5f55\u3002\n[\u7f16\u8bd1\u5e76\u53ef\u89c6\u5316\u9012\u5f52](command:stackviz.compileAndVisualize)\n[\u53ef\u89c6\u5316\u5df2\u6709\u7684\u53ef\u6267\u884c\u6587\u4ef6](command:stackviz.visualizeExistingBinary)\n\u6bcf\u8c03\u7528\u4e00\u6b21\u51fd\u6570\u5c31\u662f\u4e00\u4e2a\u8282\u70b9\uff0c\u6240\u4ee5\u9012\u5f52\u7684\u6bcf\u4e00\u5c42\u90fd\u662f\u72ec\u7acb\u7684\u8282\u70b9\u3002"
       }
     ],
     "menus": {
@@ -276,7 +276,11 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && npm run test:unit && npm run test:integration",
+    "test:unit": "node --test \"test/unit/*.test.js\"",
+    "test:integration": "node --test \"test/integration/*.test.js\"",
+    "test:slow": "STACKVIZ_SLOW_TESTS=1 node --test \"test/slow/*.test.js\""
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

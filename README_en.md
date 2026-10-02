@@ -1,5 +1,8 @@
 # Stack Frame Visualizer for C (StackViz)
 
+[![tests](https://github.com/Shuanshi666/Stack-Frame-Visualizer-for-C-StackViz-/actions/workflows/test.yml/badge.svg)](https://github.com/Shuanshi666/Stack-Frame-Visualizer-for-C-StackViz-/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > **This English README is a community effort — the extension UI and the main
 > `README.md` are written in Chinese for beginners in China. If English is your
 > first language (or you simply write better English than I do), please help
@@ -219,6 +222,43 @@ the variable preview, `recordLocals` on and off, a 1000 deep program, and two
 `maxDepth` truncations), compares the event streams one by one, and checks the
 invocation counts (for example `fib(6)` must be 26 call events: `main` plus 25
 `fib`).
+
+## Tests and CI
+
+The repository ships a test suite that needs no VS Code window: it stubs the
+`vscode` module and drives the real extension code head-less.
+
+```bash
+npm install
+npm test                 # unit + integration, about 10 s on a laptop
+npm run test:unit        # plain Node: recording round trip, state machine and replay, rendering, driver constraints
+npm run test:integration # real gcc + gdb (see below)
+npm run test:slow        # optional: the 1000 frames / 5000 steps budget (~3.4 s)
+```
+
+- `test:unit` contains a regression guard for the security fix: the driver must
+  never contain `set auto-load safe-path /` again, and must keep
+  `set auto-load off`.
+- `test:integration` covers the four bundled examples plus adversarial programs
+  (two calls of the same function on one line, a loop header on the function's
+  first line, a backwards `goto`), the variable preview rules, `maxDepth`
+  truncation, library frame filtering, and the end-to-end behaviour of the call
+  tree, frame details, replay panel, export/import, environment check and
+  example picker.
+- The most important safety net is `test/integration/differential.test.js`: it
+  runs the cheap path and the exact walk (`snapshot: "full"`) over the same
+  programs and requires the event streams to be **identical**, event by event,
+  together with the expected invocation counts. If one of the clever shortcuts
+  ever mis-identifies a frame, this test turns red immediately.
+- On a machine without gcc/gdb the integration tests **skip with a printed
+  reason** instead of pretending to pass.
+- GitHub Actions (`.github/workflows/test.yml`) installs `build-essential` and
+  `gdb` on every push / pull request, runs `npm test`, and that is the badge at
+  the top of this file.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Shuanshi.
 
 ## Known limitations
 

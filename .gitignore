@@ -1,5 +1,7 @@
 node_modules/
 out/
 .stackviz/
+test/.workspace/
+test/**/.stackviz/
 *.vsix
 *.o
