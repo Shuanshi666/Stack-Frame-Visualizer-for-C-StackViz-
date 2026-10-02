@@ -117,6 +117,8 @@ The replay commands only show up in the palette once something was recorded.
 | `stackviz.maxDepth` | `100` | maximum stack depth that is tracked |
 | `stackviz.recordLocals` | `true` | read arguments and local variables |
 | `stackviz.maxArrayItems` | `10` | array elements shown in a preview |
+| `stackviz.snapshot` | `auto` | `auto` = cheap path with exact fallbacks; `safe` = walk the whole stack every step (slower, fully predictable) |
+| `stackviz.traceLevel` | `all` | output channel detail: `all` (event lines + stack snapshots) / `events` / `off` |
 
 The plugin compile command is fixed:
 
@@ -190,6 +192,15 @@ unknown sources, or running the driver by hand) the driver falls back to a
 path based rule: a frame counts as user code when its file is an absolute path
 outside the system directories. Frames whose source moved are still kept.
 
+That heuristic was tightened (2026-10): a frame counts as user code only when its
+file is an **absolute path**, is **not under a system directory** (defaults:
+`/usr /lib /lib64 /bin /sbin /etc /var /build` — `/build` is where Debian/Ubuntu
+record the source paths of packaged libraries, which used to be a false positive),
+and **exists on this machine**. If your sources moved, declare them with
+`stackviz.sourceRoots` (or `STACKVIZ_SOURCE_ROOTS`): those roots win over the
+system list, and `STACKVIZ_SYSTEM_PREFIXES` replaces it. While guessing, the
+driver logs `[stackviz] 没有拿到这个二进制的源码列表…` so the mode is visible.
+
 ## Bundled examples
 
 `StackViz: Open Example` copies one of these into
@@ -214,6 +225,15 @@ resync and when the stack changes in an unexpected way.
 | --- | --- | --- |
 | 1000 frames deep / 5000 steps (5011 events) | 25.9 s | **2.2 s** |
 | the extension side processing those 5011 events | — | **34 ms**, longest iteration 9.7 ms |
+
+The interactive path was cleaned up with the same mindset (measured at 100k
+events):
+
+| Action | Before | Now |
+| --- | --- | --- |
+| one "next step" or "play" tick | 12.7 ms (full replay each time) | **0.003 ms** |
+| panel refresh reading counts and exceptions | 1.56 ms (array copy + full scan) | **0.015 ms** |
+| dragging back to the middle of the recording | 12.7 ms | 1.6 ms, bounded by the 100k cap |
 
 Correctness is not taken on faith: setting `STACKVIZ_SNAPSHOT=full` in
 `STACKVIZ_OPTIONS` makes the driver fall back to the exact walk. The test suite

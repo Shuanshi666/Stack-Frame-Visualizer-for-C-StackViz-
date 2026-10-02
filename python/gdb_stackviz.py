@@ -53,6 +53,9 @@ DEFAULT_OPTIONS = {
     # "auto" uses the cheap top-frame diff with periodic resyncs, "full" always
     # walks the whole stack (slower, handy for comparing the two).
     "snapshot": "auto",
+    # Extra "this is my code" roots and the directories that never hold it.
+    "sourceRoots": [],
+    "systemPrefixes": [],
 }
 
 MAX_VARIABLES = 20
@@ -105,6 +108,16 @@ def load_options():
         except Exception as exc:  # noqa: BLE001
             log("ignoring malformed STACKVIZ_SOURCES: %s" % exc)
 
+    for variable, key in (("STACKVIZ_SOURCE_ROOTS", "sourceRoots"), ("STACKVIZ_SYSTEM_PREFIXES", "systemPrefixes")):
+        raw = os.environ.get(variable)
+        if raw:
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    options[key] = [str(entry) for entry in parsed]
+            except Exception as exc:  # noqa: BLE001
+                log("ignoring malformed %s: %s" % (variable, exc))
+
     port = os.environ.get("STACKVIZ_PORT")
     if port:
         try:
@@ -125,7 +138,9 @@ def load_options():
 
 
 #: Directories that never contain the program the user is learning from.
-SYSTEM_PREFIXES = ("/usr/", "/lib/", "/lib64/", "/bin/", "/sbin/", "/etc/", "/var/")
+#: "/build/" is where Debian/Ubuntu record the source paths of packaged
+#: libraries, so a glibc frame with absolute paths is filtered as well.
+SYSTEM_PREFIXES = ("/usr/", "/lib/", "/lib64/", "/bin/", "/sbin/", "/etc/", "/var/", "/build/")
 
 
 class Sources(object):
@@ -157,6 +172,14 @@ class Sources(object):
             except Exception:  # noqa: BLE001
                 continue
         self.mode = "list" if self.files else "heuristic"
+        self.roots = []
+        for entry in options.get("sourceRoots") or []:
+            try:
+                self.roots.append(os.path.realpath(entry).rstrip("/") + "/")
+            except Exception:  # noqa: BLE001
+                continue
+        prefixes = options.get("systemPrefixes") or []
+        self.system_prefixes = tuple(prefixes) if prefixes else SYSTEM_PREFIXES
         # is_user_file() runs once per frame and per step; without this cache a
         # 1000 frame stack would pay 1000 realpath() calls (syscalls) per step.
         self._cache = {}
@@ -190,17 +213,21 @@ class Sources(object):
         except Exception:  # noqa: BLE001
             return file_name in self.files
 
-    @staticmethod
-    def _looks_like_project_file(file_name):
+    def _looks_like_project_file(self, file_name):
         if not file_name or not os.path.isabs(file_name):
             # Empty paths and relative paths such as "./csu/../csu/libc-start.c"
             # come from libraries whose sources are not on this machine.
             return False
         normalized = os.path.realpath(file_name)
-        for prefix in SYSTEM_PREFIXES:
+        for root in self.roots:
+            if (normalized.rstrip("/") + "/").startswith(root):
+                return True
+        for prefix in self.system_prefixes:
             if normalized.startswith(prefix):
                 return False
-        return True
+        # A path that does not exist here is almost always a build machine path
+        # baked into a packaged library, not the learner's own source.
+        return os.path.isfile(normalized)
 
 
 # ---------------------------------------------------------------------------
@@ -1012,6 +1039,15 @@ def run(options, sender):
     tracker = Tracker(sender, options)
     sources = Sources(options)
     configure_gdb()
+    log("snapshot strategy: %s" % ("full walk every step" if not tracker.fast_path else "auto (fast path, exact fallback)"))
+    log(
+        "source filter: %s"
+        % (
+            "file list (%d file(s))" % len(sources.files)
+            if sources.mode == "list"
+            else "heuristic (absolute paths outside %s)" % ", ".join(sources.system_prefixes)
+        )
+    )
 
     try:
         gdb.execute("start")
@@ -1027,6 +1063,12 @@ def run(options, sender):
         if not sources.is_user_file(entry_file):
             sources.use_heuristic(
                 "the entry frame (%s) is not one of the known sources" % (entry_file or "unknown")
+            )
+            # Informational: keep it out of the event stream (the UI renders
+            # "exception" events as problems, and this is not one).
+            log(
+                "没有拿到这个二进制的源码列表，正在按路径猜测哪些帧是你自己的代码；"
+                "如果显示不对，请改用插件编译模式（或设置 stackviz.sourceRoots）"
             )
 
     steps = 0

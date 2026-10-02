@@ -189,3 +189,33 @@ test('Visualize Existing Binary 使用设置里的可执行文件', { skip }, as
 
   harness.restore();
 });
+
+test('traceLevel 控制输出面板的详细程度', { skip }, async () => {
+  for (const [level, expectTrace, expectSnapshot] of [
+    ['all', true, true],
+    ['events', true, false],
+    ['off', false, false],
+  ]) {
+    const harness = createHarness({ settings: { traceLevel: level } });
+    harness.activate();
+    openFixture(harness, 'deep.c');
+    await harness.state.commands.get('stackviz.compileAndVisualize')();
+    await waitForEndOfRun(harness.output);
+    const text = harness.output.text();
+    assert.equal(text.includes('[0001]'), expectTrace, `traceLevel=${level} 的事件行`);
+    assert.equal(text.includes('<-- 栈顶'), expectSnapshot, `traceLevel=${level} 的栈快照`);
+    assert.match(text, /===== 本次记录小结 =====/, '小结永远打印');
+    harness.restore();
+  }
+});
+
+test('snapshot: safe 会传给驱动（并在日志里可见）', { skip }, async () => {
+  const harness = createHarness({ settings: { snapshot: 'safe' } });
+  harness.activate();
+  openFixture(harness, 'factorial.c');
+  await harness.state.commands.get('stackviz.compileAndVisualize')();
+  await waitForEndOfRun(harness.output);
+  assert.match(harness.output.text(), /snapshot strategy: full walk every step/);
+  assert.equal(allNodes(harness.state.treeProvider).length, 9);
+  harness.restore();
+});

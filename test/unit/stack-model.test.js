@@ -145,6 +145,47 @@ test('the visible state survives a full replay from the start', () => {
   assert.equal(depthAtEnd, 31);
 });
 
+test('jumping forward gives exactly the state of a fresh replay', () => {
+  const events = [call(1, undefined, 0, 'main')];
+  for (let index = 1; index <= 20; index += 1) {
+    events.push(call(index + 1, index, index, 'down'));
+    events.push(line(index + 1, index, 'down'));
+  }
+
+  const jumped = new StackModel();
+  feed(jumped, events);
+  jumped.seek(9); // backwards: rebuild
+  jumped.seek(31); // forwards: incremental
+  jumped.seek(21); // backwards again
+  jumped.seek(40); // forwards again
+
+  const fresh = new StackModel();
+  feed(fresh, events.slice(0, jumped.cursor + 1));
+
+  assert.deepEqual(
+    jumped.liveFrames().map((frame) => frame.frameId),
+    fresh.liveFrames().map((frame) => frame.frameId)
+  );
+  assert.deepEqual(
+    jumped.childrenOf(1).map((frame) => frame.frameId),
+    fresh.childrenOf(1).map((frame) => frame.frameId)
+  );
+  assert.equal(jumped.trackedFrames, fresh.trackedFrames);
+});
+
+test('exception markers follow the cursor and the retention window', () => {
+  const model = new StackModel();
+  const exception = (frameId, message) => ({
+    type: 'exception', frameId, functionName: 'f', file: '/x/a.c', line: 1, depth: 0, timestamp: 0, message,
+  });
+  feed(model, [call(1, undefined, 0, 'main'), exception(1, '第一条'), line(1, 0, 'main'), exception(1, '第二条')]);
+  assert.equal(model.exceptions().length, 2);
+  model.seek(1);
+  assert.deepEqual(model.exceptions().map((mark) => mark.message), ['第一条']);
+  model.followLatest();
+  assert.equal(model.exceptions().length, 2);
+});
+
 test('reset and loadRecording replace the whole recording', () => {
   const model = new StackModel();
   feed(model, [call(1, undefined, 0, 'main'), call(2, 1, 1, 'f')]);

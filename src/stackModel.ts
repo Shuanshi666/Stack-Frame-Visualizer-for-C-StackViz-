@@ -346,6 +346,8 @@ export class StackModel {
   private following = true;
   private droppedEvents = 0;
   private state = new ReplayState();
+  /** Exception markers, maintained incrementally (the panel reads them often). */
+  private exceptionMarks: ExceptionMark[] = [];
 
   public get ended(): boolean {
     return this.state.ended;
@@ -375,6 +377,11 @@ export class StackModel {
     return this.following;
   }
 
+  /** Number of retained events - O(1) on purpose, the UI polls it. */
+  public get retainedEvents(): number {
+    return this.events.length;
+  }
+
   public get trackedFrames(): number {
     return this.state.trackedFrames;
   }
@@ -398,6 +405,7 @@ export class StackModel {
     this.following = true;
     this.droppedEvents = 0;
     this.state = new ReplayState();
+    this.exceptionMarks = [];
   }
 
   /** Appends one event; the visible state follows only in live mode. */
@@ -406,8 +414,7 @@ export class StackModel {
     this.events.push(event);
     this.trimEvents();
     if (this.following) {
-      this.state.apply(event);
-      this.cursorIndex = index;
+      this.applyAt(index);
     }
   }
 
@@ -427,15 +434,21 @@ export class StackModel {
    */
   public seek(index: number): void {
     const clamped = Math.max(this.firstIndex - 1, Math.min(this.lastEventIndex, Math.trunc(index)));
-    this.cursorIndex = clamped;
-    this.following = clamped >= this.lastEventIndex;
-    this.state = new ReplayState();
-    for (let cursor = this.firstIndex; cursor <= clamped; cursor += 1) {
-      const event = this.events[cursor - this.firstIndex];
-      if (event) {
-        this.state.apply(event);
+    if (clamped > this.cursorIndex) {
+      // Stepping forward (and "play") must not replay the whole recording.
+      for (let cursor = this.cursorIndex + 1; cursor <= clamped; cursor += 1) {
+        this.applyAt(cursor);
+      }
+    } else if (clamped < this.cursorIndex) {
+      this.state = new ReplayState();
+      this.exceptionMarks = [];
+      this.cursorIndex = this.firstIndex - 1;
+      for (let cursor = this.firstIndex; cursor <= clamped; cursor += 1) {
+        this.applyAt(cursor);
       }
     }
+    this.cursorIndex = clamped;
+    this.following = clamped >= this.lastEventIndex;
   }
 
   public followLatest(): void {
@@ -481,20 +494,9 @@ export class StackModel {
     return this.events[index - this.firstIndex];
   }
 
-  /** Every exception of the recording, together with its event index. */
-  public exceptions(): ExceptionMark[] {
-    const marks: ExceptionMark[] = [];
-    this.events.forEach((event, offset) => {
-      if (event.type === 'exception') {
-        marks.push({
-          index: this.firstIndex + offset,
-          frameId: event.frameId,
-          functionName: event.functionName,
-          message: event.message ?? 'exception'
-        });
-      }
-    });
-    return marks;
+  /** Every exception up to the cursor, together with its event index. */
+  public exceptions(): readonly ExceptionMark[] {
+    return this.exceptionMarks;
   }
 
   public exportEvents(): CStackEvent[] {
@@ -569,11 +571,31 @@ export class StackModel {
     this.events.splice(0, drop);
     this.firstIndex += drop;
     this.droppedEvents += drop;
+    this.exceptionMarks = this.exceptionMarks.filter((mark) => mark.index >= this.firstIndex);
     if (this.cursorIndex < this.firstIndex) {
       // The cursor pointed at events that are no longer retained.
       this.cursorIndex = this.firstIndex - 1;
       this.following = false;
       this.state = new ReplayState();
+      this.exceptionMarks = [];
     }
+  }
+
+  /** Applies one retained event to the visible state and remembers exceptions. */
+  private applyAt(globalIndex: number): void {
+    const event = this.events[globalIndex - this.firstIndex];
+    if (!event) {
+      return;
+    }
+    this.state.apply(event);
+    if (event.type === 'exception') {
+      this.exceptionMarks.push({
+        index: globalIndex,
+        frameId: event.frameId,
+        functionName: event.functionName,
+        message: event.message ?? 'exception'
+      });
+    }
+    this.cursorIndex = globalIndex;
   }
 }

@@ -314,7 +314,7 @@ export class TimelinePanel implements vscode.Disposable {
       cursor: model.cursor,
       first: model.firstEventIndex,
       last: model.lastEventIndex,
-      count: model.exportEvents().length,
+      count: model.retainedEvents,
       position: cursorPosition,
       following: model.isFollowing,
       playing: this.playing,

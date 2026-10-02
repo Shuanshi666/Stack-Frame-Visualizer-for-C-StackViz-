@@ -269,6 +269,36 @@
           "minimum": 0,
           "description": "Maximum number of array elements shown in a variable preview.",
           "scope": "resource"
+        },
+        "stackviz.snapshot": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "safe"
+          ],
+          "enumDescriptions": [
+            "快速路径：只读栈顶帧，异常时自动回退到完整走栈。默认，1000 层递归约 2 秒。",
+            "安全模式：每一步都完整走栈，最慢但完全不依赖捷径，适合程序形状很奇怪时。"
+          ],
+          "default": "auto",
+          "markdownDescription": "gdb 驱动如何判断调用栈的变化。`safe` 会慢几倍，但行为完全可预测。",
+          "scope": "resource"
+        },
+        "stackviz.traceLevel": {
+          "type": "string",
+          "enum": [
+            "all",
+            "events",
+            "off"
+          ],
+          "enumDescriptions": [
+            "每个事件一行，并在调用/返回时打印完整栈快照（默认）。",
+            "每个事件一行，但不打印栈快照，输出量小很多。",
+            "只打印开始信息和最后的小结，逐行走交给回放面板。"
+          ],
+          "default": "all",
+          "markdownDescription": "StackViz 输出面板的详细程度。长程序建议用 `events` 或 `off`。",
+          "scope": "resource"
         }
       }
     }

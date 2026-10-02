@@ -8,6 +8,7 @@ const test = require('node:test');
 
 const { compileFixture, gdbSkipReason } = require('../helpers/toolchain');
 const { record, countByType } = require('../helpers/driver');
+const path = require('node:path');
 
 const skip = gdbSkipReason();
 const options = skip ? {} : undefined;
@@ -109,4 +110,41 @@ test('库函数回调：qsort 的比较函数不会让记录崩掉', { skip }, a
     assert.ok(parent, '比较函数的父帧必须是已记录的帧');
     assert.notEqual(parent.functionName, 'compare_desc', '调用关系挂在调用者下面');
   }
+});
+
+test('启发式过滤：系统目录前缀可配置，sourceRoots 可以覆盖它', { skip }, async () => {
+  const { source, binary } = compileFixture('factorial.c');
+  const sourceDir = path.dirname(source);
+
+  // Declare the fixture directory a "system" directory: nothing is user code.
+  const filtered = await record({
+    source,
+    binary,
+    sources: null,
+    env: { STACKVIZ_SYSTEM_PREFIXES: JSON.stringify([sourceDir]) },
+  });
+  assert.equal(countByType(filtered.events).call, 0, '被声明为系统目录后不应记录任何用户帧');
+  assert.match(filtered.stderr, /source filter: heuristic/);
+
+  // ... unless the same directory is explicitly declared as a source root.
+  const rooted = await record({
+    source,
+    binary,
+    sources: null,
+    env: {
+      STACKVIZ_SYSTEM_PREFIXES: JSON.stringify([sourceDir]),
+      STACKVIZ_SOURCE_ROOTS: JSON.stringify([sourceDir]),
+    },
+  });
+  assert.equal(countByType(rooted.events).call, 9, 'sourceRoots 应优先于系统前缀');
+});
+
+test('snapshot 设置：safe 模式与默认模式结果一致，并把自己写进日志', { skip }, async () => {
+  const { source, binary } = compileFixture('factorial.c');
+  const safe = await record({ source, binary, options: { snapshot: 'full' } });
+  const auto = await record({ source, binary });
+  assert.match(safe.stderr, /snapshot strategy: full walk every step/);
+  assert.match(auto.stderr, /snapshot strategy: auto/);
+  assert.equal(countByType(safe.events).call, 9);
+  assert.equal(countByType(auto.events).call, 9);
 });

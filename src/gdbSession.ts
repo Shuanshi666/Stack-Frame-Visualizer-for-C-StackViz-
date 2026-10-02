@@ -21,6 +21,10 @@ export interface StackVizConfig {
   maxDepth: number;
   recordLocals: boolean;
   maxArrayItems: number;
+  /** auto = cheap snapshot path, safe = always walk the whole stack. */
+  snapshot: 'auto' | 'safe';
+  /** How much the output channel narrates. */
+  traceLevel: 'all' | 'events' | 'off';
 }
 
 export interface CompileResult {
@@ -49,8 +53,14 @@ export function readConfig(resource?: vscode.Uri): StackVizConfig {
     maxSteps: clampNumber(configuration.get<number>('maxSteps', 5000), 1, 1_000_000, 5000),
     maxDepth: clampNumber(configuration.get<number>('maxDepth', 100), 1, 10_000, 100),
     recordLocals: configuration.get<boolean>('recordLocals', true) !== false,
-    maxArrayItems: clampNumber(configuration.get<number>('maxArrayItems', 10), 0, 1000, 10)
+    maxArrayItems: clampNumber(configuration.get<number>('maxArrayItems', 10), 0, 1000, 10),
+    snapshot: configuration.get<string>('snapshot', 'auto') === 'safe' ? 'safe' : 'auto',
+    traceLevel: readTraceLevel(configuration.get<string>('traceLevel', 'all'))
   };
+}
+
+function readTraceLevel(value: string): 'all' | 'events' | 'off' {
+  return value === 'off' || value === 'events' ? value : 'all';
 }
 
 function runProcess(
@@ -156,7 +166,8 @@ export class StackVizSession implements vscode.Disposable {
     private readonly model: StackModel,
     public readonly binaryPath: string,
     private readonly onExit: ((session: StackVizSession) => void) | undefined,
-    private readonly onEvent: ((event: CStackEvent) => void) | undefined
+    private readonly onEvent: ((event: CStackEvent) => void) | undefined,
+    private readonly traceLevel: 'all' | 'events' | 'off' = 'all'
   ) {}
 
   public static async start(options: SessionStartOptions): Promise<StackVizSession> {
@@ -165,7 +176,8 @@ export class StackVizSession implements vscode.Disposable {
       options.model,
       options.binaryPath,
       options.onExit,
-      options.onEvent
+      options.onEvent,
+      options.config.traceLevel
     );
     await session.launch(options);
     return session;
@@ -185,7 +197,8 @@ export class StackVizSession implements vscode.Disposable {
       maxSteps: options.config.maxSteps,
       maxDepth: options.config.maxDepth,
       recordLocals: options.config.recordLocals,
-      maxArrayItems: options.config.maxArrayItems
+      maxArrayItems: options.config.maxArrayItems,
+      snapshot: options.config.snapshot === 'safe' ? 'full' : 'auto'
     });
     const args = ['-q', '-nx', '-batch', '-x', scriptPath, '--args', options.binaryPath];
     this.output.appendLine(`$ ${options.config.gdbPath} ${args.join(' ')}`);
@@ -282,7 +295,13 @@ export class StackVizSession implements vscode.Disposable {
 
   private logEvent(event: CStackEvent): void {
     this.eventSequence += 1;
+    if (this.traceLevel === 'off') {
+      return;
+    }
     this.output.appendLine(eventLine(event, this.eventSequence));
+    if (this.traceLevel !== 'all') {
+      return;
+    }
 
     switch (event.type) {
       case 'call':
