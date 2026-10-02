@@ -250,11 +250,15 @@ The repository ships a test suite that needs no VS Code window: it stubs the
 
 ```bash
 npm install
-npm test                 # unit + integration, about 10 s on a laptop
+npm test                 # unit + integration, about 10 s on a laptop (compiles first)
 npm run test:unit        # plain Node: recording round trip, state machine and replay, rendering, driver constraints
 npm run test:integration # real gcc + gdb (see below)
 npm run test:slow        # optional: the 1000 frames / 5000 steps budget (~3.4 s)
 ```
+
+`test:unit` and `test:integration` run `npm run compile` first, because the tests
+drive the compiled extension; calling `node test/run.js` directly without a build
+now fails with a one-line hint instead of `MODULE_NOT_FOUND`.
 
 - `test:unit` contains a regression guard for the security fix: the driver must
   never contain `set auto-load safe-path /` again, and must keep

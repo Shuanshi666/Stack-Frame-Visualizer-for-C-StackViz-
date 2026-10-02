@@ -17,6 +17,16 @@ if (roots.length === 0) {
   process.exit(2);
 }
 
+// The unit and integration tests drive the compiled extension, so a missing
+// build is a setup problem, not a test failure - say so instead of letting
+// every file die with MODULE_NOT_FOUND.
+const compiledEntry = path.resolve(__dirname, '..', 'out', 'extension.js');
+const needsBuild = roots.some((root) => /(^|\/)(unit|integration)\/?$/.test(root));
+if (needsBuild && !fs.existsSync(compiledEntry)) {
+  console.error('out/ 不存在：这些测试要跑编译后的扩展，请先执行  npm run compile  （或直接 npm test）');
+  process.exit(2);
+}
+
 const files = [];
 for (const root of roots) {
   const directory = path.resolve(root);

@@ -308,8 +308,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node test/run.js test/unit test/integration",
-    "test:unit": "node test/run.js test/unit",
-    "test:integration": "node test/run.js test/integration",
+    "test:unit": "npm run compile && node test/run.js test/unit",
+    "test:integration": "npm run compile && node test/run.js test/integration",
     "test:slow": "STACKVIZ_SLOW_TESTS=1 node test/run.js test/slow"
   },
   "devDependencies": {

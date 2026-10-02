@@ -349,11 +349,14 @@ note     : the program exited with code 0
 
 ```bash
 npm install
-npm test                 # 单元 + 集成，本机约 10 秒
+npm test                 # 单元 + 集成，本机约 10 秒（会先自动编译）
 npm run test:unit        # 纯 Node：记录文件往返、状态机/回放、文本渲染、驱动脚本的静态约束
 npm run test:integration # 真跑 gcc + gdb（见下）
 npm run test:slow        # 可选：1000 帧深 / 5000 步的性能预算（本机约 3.4 秒）
 ```
+
+`test:unit` 与 `test:integration` 都会先跑一次 `npm run compile`（测试跑的是编译后的
+扩展代码）；单独调用 `node test/run.js` 时如果 `out/` 不存在会直接提示先编译。
 
 - `test:unit` 里有一条**防复发的静态检查**：驱动脚本中不允许再出现
   `set auto-load safe-path /`（那会掀掉 gdb 的一层安全保护），必须保持
