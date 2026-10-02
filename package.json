@@ -307,10 +307,10 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && npm run test:unit && npm run test:integration",
-    "test:unit": "node --test \"test/unit/*.test.js\"",
-    "test:integration": "node --test \"test/integration/*.test.js\"",
-    "test:slow": "STACKVIZ_SLOW_TESTS=1 node --test \"test/slow/*.test.js\""
+    "test": "npm run compile && node test/run.js test/unit test/integration",
+    "test:unit": "node test/run.js test/unit",
+    "test:integration": "node test/run.js test/integration",
+    "test:slow": "STACKVIZ_SLOW_TESTS=1 node test/run.js test/slow"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
